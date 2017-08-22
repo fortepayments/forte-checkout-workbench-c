@@ -1,0 +1,527 @@
+﻿<!DOCTYPE html>
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head >
+    <title>Checkout Workbench</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <script src="http://code.jquery.com/jquery-latest.min.js" type="text/javascript"></script>
+    <script type="text/javascript" src="https://sandbox.forte.net/checkout/v1/js"></script>
+    <link rel="stylesheet" type="text/css" href="//netdna.bootstrapcdn.com/bootstrap/3.1.1/css/bootstrap.min.css" />
+    <link href="site.css" rel="stylesheet" />
+    <script>
+
+        var button;
+        var utc_time = getUTCTicks();
+        $(document).ready(function () {
+            $('#browser').html(window.navigator.userAgent);
+
+            button = $('button[api_login_ID]');
+
+            $('.param').each(function () {
+                if ($(this).val().length > 0)
+                    button.attr($(this).attr('id'), $(this).val());
+            });
+
+            $('input.param').on('change keyup', function (e) {
+                e.preventDefault();
+                button.attr($(this).attr('id'), $(this).val());
+                updateButtonatributes();
+            });
+
+            $('select.param').change(function () {
+                button.attr($(this).attr('id'), $(this).val());
+                if ($(this).attr('id') == 'hash_method' || $(this).attr('id') == 'method') {
+                    var utc_time = getUTCTicks();
+                    updateButtonatributes();
+                }
+                
+            });
+
+            updateButtonatributes();
+            
+            $('input[type=checkbox]').click(function () {
+                if ($(this).attr('id') == 'collect_shipping_address' || $(this).attr('id') == 'save_token') {
+                    button.attr($(this).attr('id'), $(this).is(':checked') ? 'true' : 'false');
+                    showBtnHtml();
+                }
+            });
+
+            $('input[type=checkbox]').click(function () {
+                if ($(this).attr('id') == 'total_amount_attr' || $(this).attr('id') == 'schedule_start_date_attr' || $(this).attr('id') == 'schedule_quantity_attr' || $(this).attr('id') == 'schedule_continuous_attr' || $(this).attr('id') == 'schedule_frequency_attr') {
+                    if ($(this).is(':checked'))
+                        button.attr($(this).attr('id'), 'edit');
+                    else
+                        button.removeAttr($(this).attr('id'));
+                        showBtnHtml();
+                }
+            });
+
+            showBtnHtml();
+
+            $('#amountselect').change(function () {
+                switch ($(this).val()) {
+                    case '':
+                        $('#total_amount').val('');
+                        break;
+                    case 'r0':
+                        $('#total_amount').val('');
+                        break;
+                    case 'r1':
+                        $('#total_amount').val('3.50');
+                        break;
+                    case 'r2':
+                        $('#total_amount').val('1-9.50');
+                        break;
+                    case 'r3':
+                        $('#total_amount').val('1-9.5;5');
+                        break;
+                    case 'r4':
+                        $('#total_amount').val('{20,40,60,80,100}');
+                        break;
+                    case 'r5':
+                        $('#total_amount').val('{20,40,60,80,100,0}');
+                        break;
+                    case 'r6':
+                        $('#total_amount').val('{20,40,60,80,100,0};50');
+                        break;
+                    case 'r7':
+                        $('#total_amount').val('{20,40,60,80,100,0};20-1000');
+                        break;
+                    case 'r8':
+                        $('#total_amount').val('{20,40,60,80,100,0};20-1000;100');
+                        break;
+                    case 'r9':
+                        $('#total_amount').val('{1375.23,1573.66,56.99|Total outstanding,Last statement balance,Minimum balance}');
+                        break;
+                    case 'r10':
+                        $('#total_amount').val('{1375.23,1573.66,56.99,0|Total outstanding,Last statement balance,Minimum balance,Specify different amount}');
+                        break;
+                    case 'r11':
+                        $('#total_amount').val('{1375.23,1573.66,56.99,0|Total outstanding,Last statement balance,Minimum balance,Specify different amount};500.00');
+                        break;
+                    case 'r12':
+                        $('#total_amount').val('{1375.23,1573.66,56.99,0|Total outstanding,Last statement balance,Minimum balance,Specify different amount};56.99-1573.66');
+                        break;
+                    case 'r13':
+                        $('#total_amount').val('{1375.23,1573.66,56.99,0|Total outstanding,Last statement balance,Minimum balance,Specify different amount};56.99-1573.66;500.00');
+                        break;
+                }
+                button.attr("total_amount", $('#total_amount').val());
+
+                updateButtonatributes()
+                
+            });
+        });
+
+        function showBtnHtml() {
+            $('#btnhtml').val(button[0].outerHTML);
+        }
+
+        function getUTCTicks() {
+            return ((new Date().getTime() * 10000) + 621355968000000000);
+        }
+
+        function getHash(utc_time) {
+            var api_login_id = button.attr('api_login_ID');
+            var version_number = button.attr('version_number');
+            var total_amount = button.attr('total_amount');
+            var transaction_order_number = button.attr('transaction_order_number');
+
+            if (typeof transaction_order_number == 'undefined') transaction_order_number = '';
+
+            var data = api_login_id + '|' + $("#method").val() + '|' + version_number + '|' + total_amount + '|' + utc_time + '|' + transaction_order_number + '|' + $("#customer_token").val() + '|' + $("#paymethod_token").val();
+
+            // AJAX signature call.
+            $.ajax({
+                cache: false,
+                type: 'POST',
+                url: "checkoutworkbench.aspx/sign",
+                contentType: "application/json; charset=utf-8",
+                data: "{'Attributes':'" + data + "' , Hash_Method:'" + $('#hash_method').val() + "'}",
+                contentType: "application/json; charset=utf-8",
+                error: function (xhr, err) {
+                    alert("readyState: " + xhr.readyState + "\nstatus: " + xhr.status);
+                    alert("responseText: " + xhr.responseText);
+                },
+                success: function (data) {
+                    button.attr('utc_time', utc_time).attr('signature', data.d).removeAttr('hash_method').attr('hash_method', $('#hash_method').val());
+                    showBtnHtml();
+                    
+                }
+            });
+            // End AJAX call
+        }
+
+        function oncallback(e) {
+            $('#message').html(e.data);
+        }
+        function updateButtonatributes() {
+            getHash(utc_time);
+        }
+    </script>   
+</head>
+<body>
+    <form id="frm" method="post">
+        <div class="container">
+            <div class="header">
+                <div class="text-center">
+                    <h3 class="text-muted">Checkout Test Workbench</h3>
+                </div>
+            </div>
+            <div class="form-horizontal" role="form">
+                <div class="form-group">
+                    <div class="col-md-3">
+                    </div>
+                    <div class="col-sm-2">
+                        <h6><strong>Authentication</strong></h6>
+                    </div>
+                    <div class="col-md-2">
+                    </div>
+                    <div class="col-md-2">
+                    </div>
+                    <div class="col-md-3">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-md-3">
+                    </div>
+                    <div class="col-sm-6">
+                        <hr class="hra" />
+                        <div class="col-md-3">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-3">
+                    </div>
+                    <label  class="col-sm-2 control-label">api_login_id:</label>
+                    <div class="col-sm-2">
+                        <input id="api_login_id" class="param" type="text" value="YourAPILoginID" />
+                    </div>
+                    <div class="col-sm-2">
+                    </div>
+                    <div class="col-sm-3">
+                    </div>
+                </div>               
+                <div class="form-group">
+                    <div class="col-sm-3">
+                    </div>
+                    <label  class="col-sm-2 control-label">Hash Method:</label>
+                    <div class="col-sm-2">
+                        <select id="hash_method" class="param">
+                            <option value="md5">md5</option>
+                            <option value="sha1">sha1</option>
+                            <option value="sha256">sha256</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-2">
+                    </div>
+                    <div class="col-sm-3">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="col-md-3">
+                    </div>
+                    <div class="col-sm-2">
+                        <h6><strong>Options</strong></h6>
+                    </div>
+                    <div class="col-md-2">
+                    </div>
+                    <div class="col-md-2">
+                    </div>
+                    <div class="col-md-3">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-md-3">
+                    </div>
+                    <div class="col-sm-6">
+                        <hr class="hra" />
+                        <div class="col-md-3">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-3">
+                    </div>
+                    <label  class="col-sm-2 control-label">Method:</label>
+                    <div class="col-sm-2">
+                        <select id="method" class="param">
+                            <option value="sale">sale</option>
+                            <option value="schedule">schedule</option>
+                            <option value="token">token</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-2">
+                    </div>
+                    <div class="col-sm-3">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-3">
+                    </div>
+                    <label  class="col-sm-2 control-label">Customer Token:</label>
+                    <div class="col-sm-2">
+                        <input id="customer_token" class="param" type="text" value="" />
+                    </div>
+                    <div class="col-sm-2">
+                    
+                    </div>
+                    <div class="col-sm-3">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-3">
+                    </div>
+                    <label  class="col-sm-2 control-label">Payment Token:</label>
+                    <div class="col-sm-2">
+                        <input id="paymethod_token" type="text" class="param" value="" />
+                    </div>
+                    <div class="col-sm-2">
+                     
+                    </div>
+                    <div class="col-sm-3">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-3">
+                    </div>
+                    <label  class="col-sm-2 control-label">Allowed Pay Methods:</label>
+                    <div class="col-sm-2">
+                        <input id="allowed_methods" type="text" class="param" value="visa,amex,echeck" />
+                    </div>
+                    <div class="col-sm-2">
+                    </div>
+                    <div class="col-sm-3">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-3">
+                    </div>
+                    <label  class="col-sm-2 control-label">Amount Setting:</label>
+                    <div class="col-sm-3">
+                        <select id="amountselect">
+                            <option value="r3">Range+Default</option>
+                            <option value="r0">None</option>
+                            <option value="r1">Single</option>
+                            <option value="r2">Range</option>
+                            <option value="r4">Choice</option>
+                            <option value="r5">Choice+Amount</option>
+                            <option value="r6">Choice+Amount+Default</option>
+                            <option value="r7">Choice+Amount+Range</option>
+                            <option value="r8">Choice+Amount+Range+Default</option>
+                            <option value="r9">Choice+Amount+Label</option>
+                            <option value="r10">Choice+Amount+Label+Default</option>
+                            <option value="r11">Choice+Amount+Label+Range</option>
+                            <option value="r12">Choice+Amount+Label+Range+Default</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-3">
+                    </div>
+                    <div class="col-sm-1">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-3">
+                    </div>
+                    <label  class="col-sm-2 control-label">Amount Value:</label>
+                    <div class="col-sm-2">
+                        <input id="total_amount" class="param" style="width: 350px;" type="text" value="1-9.5;5" />
+                    </div>
+                    <div class="col-sm-2">
+                    </div>
+                    <div class="col-sm-3">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-3">
+                    </div>
+                    <label  class="col-sm-2 control-label"></label>
+                    <div class="col-sm-2">
+                        <div class="checkbox">
+                            <label>
+                                <input id="collect_shipping_address" type="checkbox" checked="checked" />Collect ship-to
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-sm-2">
+                    </div>
+                    <div class="col-sm-3">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-3">
+                    </div>
+                    <label  class="col-sm-2 control-label">
+                    </label>
+                    <div class="col-sm-2">
+                        <div class="checkbox">
+                            <label>
+                                <input id="total_amount_attr" type="checkbox" />Amount editable
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-sm-2">
+                        <div class="checkbox">
+                            <label>
+                                <input id="save_token" type="checkbox" />Save Token
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-sm-3">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-md-3">
+                    </div>
+                    <div class="col-sm-2">
+                        <h6><strong>Schedule</strong></h6>
+                    </div>
+                    <div class="col-md-2">
+                    </div>
+                    <div class="col-md-2">
+                    </div>
+                    <div class="col-md-3">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-md-3">
+                    </div>
+                    <div class="col-sm-6">
+                        <hr class="hra" />
+                        <div class="col-md-3">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-3">
+                    </div>
+                    <label  class="col-sm-2 control-label">
+                        Start Date:
+                    </label>
+                    <div class="col-sm-2">
+                        <label  class="col-sm-2 control-label">
+                            <input id="schedule_start_date" type="text" class="param" value="1/1/2015" />
+                        </label>
+                    </div>
+                    <div class="col-sm-3">
+                        <div class="checkbox">
+                            <label>
+                                <input id="schedule_start_date_attr" type="checkbox" />Editable
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-3">
+                    </div>
+                    <label  class="col-sm-2 control-label">
+                        Frequency:
+                    </label>
+                    <div class="col-sm-2">
+                        <label  class="col-sm-2 control-label">
+                            <select id="schedule_frequency" class="param">
+                                <option value="Monthly">Monthly</option>
+                                <option value="Weekly">Weekly</option>
+                                <option value="Bi-Weekly">Bi-Weekly</option>
+                                <option value="Bi-Monthly">Bi-Monthly</option>
+                                <option value="Quarterly">Quarterly</option>
+                                <option value="Semi-annually">Semi-annually</option>
+                                <option value="Annually">Annually</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="col-sm-2">
+                        <div class="checkbox">
+                            <label>
+                                <input id="schedule_frequency_attr" type="checkbox" />Editable
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-sm-3">
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-3">
+                    </div>
+                    <label  class="col-sm-2 control-label">
+                        Duration:
+                    </label>
+                    <div class="col-sm-2">
+                        <label  class="col-sm-2 control-label">
+                            <input id="schedule_quantity" type="text" class="param" value="12" />
+                        </label>
+                    </div>
+                    <div class="col-sm-2">
+                        <div class="checkbox">
+                            <label>
+                                <input id="schedule_quantity_attr" type="checkbox" />Editable
+                            </label>
+                        </div>
+                        <div class="col-sm-3">
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <div class="col-sm-3">
+                    </div>
+                    <label  class="col-sm-2 control-label">
+                        Continuous:
+                    </label>
+                    <div class="col-sm-2">
+                        <label  class="col-sm-2 control-label">
+                            <select id="schedule_continuous" class="param">
+                                <option value="true">True</option>
+                                <option value="false" selected="selected">False</option>
+                            </select>
+                        </label>
+                    </div>
+                    <div class="col-sm-2">
+                        <div class="checkbox">
+                            <label>
+                                <input id="schedule_continuous_attr" type="checkbox" />Editable
+                            </label>
+                        </div>
+                    </div>
+                    <div class="col-sm-3">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <div class="col-sm-3"></div>
+                    <div class="col-sm-6"></div>
+                    <div class="col-sm-3"></div>
+
+                </div>
+            </div>
+        </div>
+    </form>
+    <table style="padding-right: 10px; padding-top: 7px; margin-left:70%">
+        <tr>
+            <td style="padding-right: 10px; padding-top: 7px;"></td>
+            <td>
+                <div>
+                    <button api_login_id=""
+                            billing_name="Bob Smith"
+                            billing_street_line1="500 W. Bethany Drive" billing_street_line1_attr="edit"
+                            billing_locality="Allen" billing_locality_attr="edit"
+                            billing_region="tx" billing_region_attr="edit"
+                            billing_postal_code="75013" billing_postal_code_attr="edit"
+                            version_number="1.0" collect_shipping_address="true" callback="oncallback">
+                        Pay Now
+                    </button>
+                </div>
+            </td>
+        </tr>
+    </table>
+    <div class="form-group" style="padding-right: 10px; padding-top: 7px; margin-left:20%">
+        <div class="col-md-3">
+        </div>
+        <div class="col-sm-6">
+            <div id="message" style="padding-top: 10px; color: green;"></div>
+        </div>
+        <div class="col-md-3">
+        </div>
+    </div>
+</body>
+</html>
